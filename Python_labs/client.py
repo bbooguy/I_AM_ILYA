@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-"""
-Интерактивный клиент для задания №1.
-
-Показывает меню, пользователь выбирает номер запроса (или "0" — выполнить
-все по очереди). Клиент шлёт выбранный запрос на сервер (server.py должен
-быть уже запущен на 127.0.0.1:8000), печатает результат в консоль и
-одновременно дописывает его в лог-файл client_log.txt.
-
-Набор запросов: 2 "хороших" (успешных) и 5 "плохих" (ожидаемо
-завершающихся ошибкой, но без падения сервера).
-"""
-
 import json
 import http.client
 from datetime import datetime
@@ -41,7 +28,6 @@ def request(method: str, path: str, body: dict | None = None):
 
 
 def log(text: str = "") -> None:
-    """Печатает строку в консоль и дописывает её в лог-файл (в конец, не затирая старое)."""
     print(text)
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(text + "\n")
@@ -58,7 +44,7 @@ def run_case(title: str, method: str, path: str, body: dict | None = None) -> No
     log("")
 
 
-# 2 "хороших" + 5 "плохих" запросов
+
 CASES = {
     "1": ("[хороший] GET /users", "GET", "/users", None),
     "2": ("[хороший] GET /users/user2", "GET", "/users/user2", None),
