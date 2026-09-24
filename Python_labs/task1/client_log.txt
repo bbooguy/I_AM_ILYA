@@ -15,3 +15,25 @@
     Код ответа: 404
     Тело: {'error': 'Пользователь не найден'}
 
+2026-09-23 22:20:41 [INFO] === Новая сессия клиента ===
+2026-09-23 22:21:28 [INFO] GET /users/user1 -> 200 {'name': 'Алексей', 'game': 'Dota 2', 'level': 42, 'score': 15320, 'playtime_hours': 210}
+2026-09-23 22:21:50 [INFO] GET /users -> 200 {'user1': {'name': 'Алексей', 'game': 'Dota 2', 'level': 42, 'score': 15320, 'playtime_hours': 210}, 'user2': {'name': 'Мария', 'game': 'Valorant', 'level': 30, 'score': 9870, 'playtime_hours': 95}, 'user3': {'name': 'Игорь', 'game': 'CS2', 'level': 55, 'score': 21000, 'playtime_hours': 340}}
+2026-09-23 22:21:50 [INFO] GET /users/user2 -> 200 {'name': 'Мария', 'game': 'Valorant', 'level': 30, 'score': 9870, 'playtime_hours': 95}
+2026-09-23 22:21:50 [WARNING] GET /users/user99 -> 404 {'error': 'Пользователь не найден'}
+2026-09-23 22:21:50 [WARNING] GET /foo -> 404 {'error': 'маршрут не найден'}
+2026-09-23 22:21:50 [WARNING] POST /users/user1/score body={"score": "abc"} -> 400 {'error': 'score должен быть числом'}
+2026-09-23 22:21:50 [WARNING] POST /users/user1/score body={} -> 400 {'error': 'поле score обязательно'}
+2026-09-23 22:21:50 [WARNING] DELETE /users -> 405 {'error': 'метод не поддерживается'}
+2026-09-23 22:22:16 [WARNING] GET /foo -> 404 {'error': 'маршрут не найден'}
+2026-09-23 22:22:57 [WARNING] POST /users/user1/score -> 400 {'error': 'поле score обязательно'}
+2026-09-23 22:46:31 [INFO] === Новая сессия клиента ===
+2026-09-23 22:47:13 [INFO] POST /users/user1/score body={"score": 500} -> 200 {'name': 'Алексей', 'game': 'Dota 2', 'level': 42, 'score': 15820, 'playtime_hours': 210}
+2026-09-23 22:47:39 [INFO] GET /users -> 200 {'user1': {'name': 'Алексей', 'game': 'Dota 2', 'level': 42, 'score': 15820, 'playtime_hours': 210}, 'user2': {'name': 'Мария', 'game': 'Valorant', 'level': 30, 'score': 9870, 'playtime_hours': 95}, 'user3': {'name': 'Игорь', 'game': 'CS2', 'level': 55, 'score': 21000, 'playtime_hours': 340}}
+2026-09-23 22:47:39 [INFO] GET /users/user2 -> 200 {'name': 'Мария', 'game': 'Valorant', 'level': 30, 'score': 9870, 'playtime_hours': 95}
+2026-09-23 22:47:39 [WARNING] GET /users/user99 -> 404 {'error': 'Пользователь не найден'}
+2026-09-23 22:47:39 [WARNING] GET /foo -> 404 {'error': 'маршрут не найден'}
+2026-09-23 22:47:39 [WARNING] POST /users/user1/score body={"score": "abc"} -> 400 {'error': 'score должен быть числом'}
+2026-09-23 22:47:39 [WARNING] POST /users/user1/score body={} -> 400 {'error': 'поле score обязательно'}
+2026-09-23 22:47:39 [WARNING] DELETE /users -> 405 {'error': 'метод не поддерживается'}
+2026-09-24 15:55:59 [INFO] === Новая сессия клиента ===
+2026-09-24 16:04:43 [INFO] === Новая сессия клиента ===

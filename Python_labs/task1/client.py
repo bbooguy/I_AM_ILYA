@@ -104,8 +104,7 @@ HELP_TEXT = """\
 Команды:
   all        - выполнить набор из 2 хороших и 5 плохих запросов подряд
   help       - показать эту подсказку
-  --s_help   - то же самое, что help
-  exit       - выйти (quit тоже работает)
+  exit       - выйти
 """
 
 
@@ -137,7 +136,7 @@ def main() -> None:
         if line.lower() in ("exit", "quit"):
             print("Выход.")
             break
-        if line.lower() in ("help", "--s_help"):
+        if line.lower() == "help":
             print(HELP_TEXT)
             continue
         if line.lower() == "all":
