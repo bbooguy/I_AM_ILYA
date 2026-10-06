@@ -1,76 +1,71 @@
-#!/usr/bin/env python3
+"""Проверки API и устойчивости. Сначала запустите server.py."""
+
 import json
 import socket
-import http.client
 
-HOST = "127.0.0.1"
-PORT = 8000
+from client import HOST, PORT, request
 
 
-def raw_broken_json() -> str:
-    body = b'{"score": '
-    request_bytes = (
-        f"POST /users/user1/score HTTP/1.1\r\n"
-        f"Host: {HOST}\r\n"
-        f"Content-Type: application/json\r\n"
-        f"Content-Length: {len(body)}\r\n"
-        f"Connection: close\r\n\r\n"
-    ).encode() + body
-    with socket.create_connection((HOST, PORT), timeout=5) as s:
-        s.sendall(request_bytes)
-        return s.recv(4096).decode(errors="replace")
+def check(method, path, body, expected):
+    status, raw = request(method, path, body)
+    data = json.loads(raw)
+    assert status == expected, (method, path, status, data)
+    if expected != 200:
+        assert isinstance(data.get("error"), str), data
+    print(f"{method} {path} {body} -> {status}: {raw}")
+    # Проверяем сервер после каждого запроса, а не только в конце.
+    status, _ = request("GET", "/users")
+    assert status == 200
+    return data
 
 
-def raw_no_body() -> str:
-    request_bytes = (
-        f"POST /users/user1/score HTTP/1.1\r\n"
-        f"Host: {HOST}\r\n"
-        f"Content-Length: 0\r\n"
-        f"Connection: close\r\n\r\n"
-    ).encode()
-    with socket.create_connection((HOST, PORT), timeout=5) as s:
-        s.sendall(request_bytes)
-        return s.recv(4096).decode(errors="replace")
+def main():
+    users = check("GET", "/users", "", 200)
+    assert len(users) == 3
+    before = check("GET", "/users/user1", "", 200)
+    after = check("POST", "/users/user1/score", '{"score": 500}', 200)
+    assert after["score"] == before["score"] + 500
+    cases = [
+        ("GET", "/users/user99", "", 404),
+        ("GET", "/foo", "", 404),
+        ("POST", "/users/user99/score", '{"score": 1}', 404),
+        ("POST", "/foo", "", 404),
+        ("POST", "/users/user1/score", "", 400),
+        ("POST", "/users/user1/score", '{"score":', 400),
+        ("DELETE", "/users", "", 405),
+        ("OPTIONS", "/users", "", 405),
+        ("CUSTOM", "/users", "", 405),
+        ("GET", "/users/user1/score", "", 405),
+        ("POST", "/users/user1", "", 405),
+        ("POST", "/users", "", 405),
+    ]
+    for body in ('{}', '[]', 'null', '42', '{"score": "abc"}', '{"score": "100"}',
+                 '{"score": true}', '{"score": 1.5}', '{"score": -1}'):
+        cases.append(("POST", "/users/user1/score", body, 400))
+    for case in cases:
+        check(*case)
+
+    # Полный JSON с неверной длиной тоже не должен изменить счёт.
+    with socket.create_connection((HOST, PORT), timeout=10) as connection:
+        connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score": 999}')
+        connection.shutdown(socket.SHUT_WR)
+        response = http_response(connection)
+        assert response.status == 400
+        assert "error" in json.loads(response.read())
+    # Полностью закрываем соединение в середине тела.
+    with socket.create_connection((HOST, PORT), timeout=10) as connection:
+        connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
+    final = check("GET", "/users/user1", "", 200)
+    assert final == after, (final, after)
+    print("Все проверки пройдены; сервер отвечает после ошибок и обрыва соединения.")
 
 
-def dropped_connection() -> str:
-    partial_body = b'{"score":'
-    request_bytes = (
-        f"POST /users/user1/score HTTP/1.1\r\n"
-        f"Host: {HOST}\r\n"
-        f"Content-Type: application/json\r\n"
-        f"Content-Length: 100\r\n\r\n"
-    ).encode() + partial_body
-    with socket.create_connection((HOST, PORT), timeout=5) as s:
-        s.sendall(request_bytes)
-        # закрываем сокет сразу, не дожидаясь ответа — имитация обрыва связи
-    return "соединение намеренно оборвано клиентом, не дожидаясь ответа"
-
-def server_is_alive() -> tuple[int, str]:
-    """Обычный GET /users — проверка, что сервер не упал после сбоев выше."""
-    conn = http.client.HTTPConnection(HOST, PORT, timeout=5)
-    try:
-        conn.request("GET", "/users")
-        resp = conn.getresponse()
-        return resp.status, resp.read().decode("utf-8")
-    finally:
-        conn.close()
+def http_response(connection):
+    from http.client import HTTPResponse
+    response = HTTPResponse(connection)
+    response.begin()
+    return response
 
 
 if __name__ == "__main__":
-    print("--- POST с битым JSON ---")
-    print(raw_broken_json())
-    print()
-
-    print("--- POST без тела ---")
-    print(raw_no_body())
-    print()
-
-    print("--- Обрыв соединения клиентом посреди отправки ---")
-    print(dropped_connection())
-    print()
-
-    status, body = server_is_alive()
-    print("--- Проверка, что сервер жив после всех сбоев (GET /users) ---")
-    print(f"Код ответа: {status}")
-    print(f"Тело: {body}")
+    main()
