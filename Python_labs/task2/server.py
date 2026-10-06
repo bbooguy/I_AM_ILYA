@@ -1,18 +1,32 @@
-"""Задание №1: игровая статистика без сторонних библиотек."""
+"""Игровая статистика: HTTP-сервер с валидацией Pydantic."""
 
 import json
-import math
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+from pydantic import BaseModel, Field, ValidationError
 
 HOST = "127.0.0.1"
 PORT = 8000
 
 
-USERS_DATA = {
-    "user1": {"name": "Алексей", "game": "Dota 2", "level": 42, "score": 15320, "playtime_hours": 210},
-    "user2": {"name": "Мария", "game": "Valorant", "level": 30, "score": 9870, "playtime_hours": 95},
-    "user3": {"name": "Игорь", "game": "CS2", "level": 55, "score": 21000, "playtime_hours": 340},
+class UserStats(BaseModel):
+    name: str
+    game: str
+    level: int = Field(ge=0, strict=True)
+    score: int = Field(ge=0, strict=True)
+    playtime_hours: int = Field(ge=0, strict=True)
+
+
+class ScoreUpdate(BaseModel):
+    score: int = Field(ge=0, strict=True)
+
+
+USERS_DATA: dict[str, UserStats] = {
+    "user1": UserStats(name="Алексей", game="Dota 2", level=42, score=15320, playtime_hours=210),
+    "user2": UserStats(name="Мария", game="Valorant", level=30, score=9870, playtime_hours=95),
+    "user3": UserStats(name="Игорь", game="CS2", level=55, score=21000, playtime_hours=340),
 }
+
 
 class GameStatsHandler(BaseHTTPRequestHandler):
     def setup(self):
@@ -45,13 +59,13 @@ class GameStatsHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parts = self.path.split("/")
         if parts == ["", "users"]:
-            self.send_json(200, USERS_DATA)
+            self.send_json(200, {key: user.model_dump() for key, user in USERS_DATA.items()})
         elif len(parts) == 3 and parts[:2] == ["", "users"] and parts[2]:
             user = USERS_DATA.get(parts[2])
             if user is None:
                 self.error(404, "Пользователь не найден")
             else:
-                self.send_json(200, user)
+                self.send_json(200, user.model_dump())
         elif len(parts) == 4 and parts[:2] == ["", "users"] and parts[2] and parts[3] == "score":
             self.error(405, "метод не поддерживается")
         else:
@@ -91,26 +105,13 @@ class GameStatsHandler(BaseHTTPRequestHandler):
         except (json.JSONDecodeError, UnicodeDecodeError):
             self.error(400, "невалидный JSON")
             return
-        if not isinstance(data, dict) or "score" not in data:
-            self.error(400, "нужен объект с обязательным полем score")
-            return
-        score = data["score"]
-        if isinstance(score, bool) or not isinstance(score, (int, float)):
-            self.error(400, "score должен быть числом")
-            return
-        if isinstance(score, float) and not math.isfinite(score):
-            self.error(400, "score должен быть конечным числом")
-            return
         try:
-            total = user["score"] + score
-        except OverflowError:
-            self.error(400, "слишком большое значение score")
+            update = ScoreUpdate.model_validate(data)
+        except ValidationError:
+            self.error(400, "нужен объект с полем score: целое неотрицательное число")
             return
-        if isinstance(total, float) and not math.isfinite(total):
-            self.error(400, "слишком большое значение score")
-            return
-        user["score"] = total
-        self.send_json(200, user)
+        user.score += update.score
+        self.send_json(200, user.model_dump())
 
 
 def run(host=HOST, port=PORT):

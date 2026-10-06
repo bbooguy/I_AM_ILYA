@@ -40,7 +40,7 @@ def main():
         ("POST", "/users", "", 405),
     ]
     for body in ('{}', '[]', 'null', '42', '{"score": "abc"}', '{"score": "100"}',
-                 '{"score": true}', '{"score": NaN}', '{"score": Infinity}'):
+                 '{"score": true}', '{"score": 1.5}', '{"score": -1}'):
         cases.append(("POST", "/users/user1/score", body, 400))
     for case in cases:
         check(*case)
@@ -57,10 +57,6 @@ def main():
         connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
     final = check("GET", "/users/user1", "", 200)
     assert final == after, (final, after)
-    fractional = check("POST", "/users/user1/score", '{"score": 1.5}', 200)
-    assert fractional["score"] == after["score"] + 1.5
-    negative = check("POST", "/users/user1/score", '{"score": -1}', 200)
-    assert negative["score"] == fractional["score"] - 1
     print("Все проверки пройдены; сервер отвечает после ошибок и обрыва соединения.")
 
 
