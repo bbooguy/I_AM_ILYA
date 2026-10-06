@@ -1,5 +1,3 @@
-"""Игровая статистика: HTTP-сервер с валидацией Pydantic."""
-
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -31,7 +29,7 @@ USERS_DATA: dict[str, UserStats] = {
 class GameStatsHandler(BaseHTTPRequestHandler):
     def setup(self):
         super().setup()
-        # Незавершённый запрос не должен навсегда занять сервер.
+
         self.connection.settimeout(5)
 
     def send_json(self, status, data):
@@ -50,7 +48,7 @@ class GameStatsHandler(BaseHTTPRequestHandler):
         self.send_json(status, {"error": message})
 
     def send_error(self, code, message=None, explain=None):
-        # BaseHTTPRequestHandler вызывает 501 для неизвестного HTTP-метода.
+
         if code == 501:
             self.error(405, "метод не поддерживается")
         else:

@@ -1,20 +1,3 @@
-"""Проверки API и устойчивости. Сначала запустите server.py.
-
-Короткий отчёт (проверено 06.10.2026):
-1. GET /users/user99 -> 404, «Пользователь не найден».
-2. GET /foo -> 404, «маршрут не найден».
-3. POST /users/user1/score с телом {"score": -> 400, «невалидный JSON».
-4. POST /users/user1/score с {"score": "abc"} -> 400, «score должен быть числом».
-5. DELETE /users -> 405, «метод не поддерживается».
-
-После каждого случая GET /users вернул 200 на том же экземпляре сервера.
-При неполном теле с Content-Length: 100 сервер вернул 400; после полного
-закрытия сокета посреди отправки следующий GET тоже вернул 200.
-Перед ошибками POST добавил 500 очков (15320 -> 15820), после ошибок и обрывов
-счёт остался 15820. Ни один ошибочный запрос не изменил данные.
-Проверки ниже подтверждают коды, JSON-ошибки и сохранение состояния.
-"""
-
 import json
 import socket
 
@@ -28,7 +11,7 @@ def check(method, path, body, expected):
     if expected != 200:
         assert isinstance(data.get("error"), str), data
     print(f"{method} {path} {body} -> {status}: {raw}")
-    # Проверяем сервер после каждого запроса, а не только в конце.
+
     status, _ = request("GET", "/users")
     assert status == 200
     return data
@@ -60,14 +43,14 @@ def main():
     for case in cases:
         check(*case)
 
-    # Полный JSON с неверной длиной тоже не должен изменить счёт.
+
     with socket.create_connection((HOST, PORT), timeout=10) as connection:
         connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score": 999}')
         connection.shutdown(socket.SHUT_WR)
         response = http_response(connection)
         assert response.status == 400
         assert "error" in json.loads(response.read())
-    # Полностью закрываем соединение в середине тела.
+
     with socket.create_connection((HOST, PORT), timeout=10) as connection:
         connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
     final = check("GET", "/users/user1", "", 200)

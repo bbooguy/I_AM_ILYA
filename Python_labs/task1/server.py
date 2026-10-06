@@ -1,5 +1,3 @@
-"""Задание №1: игровая статистика без сторонних библиотек."""
-
 import json
 import math
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -17,7 +15,7 @@ USERS_DATA = {
 class GameStatsHandler(BaseHTTPRequestHandler):
     def setup(self):
         super().setup()
-        # Незавершённый запрос не должен навсегда занять сервер.
+
         self.connection.settimeout(5)
 
     def send_json(self, status, data):
@@ -36,7 +34,7 @@ class GameStatsHandler(BaseHTTPRequestHandler):
         self.send_json(status, {"error": message})
 
     def send_error(self, code, message=None, explain=None):
-        # BaseHTTPRequestHandler вызывает 501 для неизвестного HTTP-метода.
+
         if code == 501:
             self.error(405, "метод не поддерживается")
         else:
