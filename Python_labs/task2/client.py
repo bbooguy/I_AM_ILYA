@@ -19,13 +19,22 @@ def request(method, path, raw_body=""):
 
 
 def interactive():
-    print("Введите метод, путь и JSON-тело. Для выхода введите exit вместо метода.")
+    print("Введите метод, путь и JSON-тело. Введите help вместо метода для примеров, exit — для выхода.")
     print('Пример: POST, /users/user1/score, {"score": 500}')
     while True:
         try:
             method = input("HTTP-метод: ").strip().upper()
             if method in ("EXIT", "QUIT"):
                 break
+            if method == "HELP":
+                print('GET /users — все пользователи; тело: Enter')
+                print('GET /users/user2 — один пользователь; тело: Enter')
+                print('POST /users/user1/score — добавить очки; тело: {"score": 500}')
+                print('GET /users/user99 — ошибка 404; тело: Enter')
+                print('POST /users/user1/score — ошибка 400; тело: {"score": "abc"}')
+                print('DELETE /users — ошибка 405; тело: Enter')
+                print('Метод, путь и тело вводятся отдельно. exit — выход.\n')
+                continue
             path = input("Путь: ").strip()
             body = input("JSON-тело (или Enter): ")
             status, response = request(method, path, body)
