@@ -1,10 +1,21 @@
 import json
+import logging
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from pydantic import BaseModel, Field, ValidationError
 
 HOST = "127.0.0.1"
 PORT = 8000
+
+logging.basicConfig(
+    filename=Path(__file__).with_name("server.log"),
+    encoding="utf-8",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("server")
 
 
 class UserStats(BaseModel):
@@ -27,6 +38,10 @@ USERS_DATA: dict[str, UserStats] = {
 
 
 class GameStatsHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        logger.info(format, *args)
+        super().log_message(format, *args)
+
     def setup(self):
         super().setup()
 
@@ -42,7 +57,11 @@ class GameStatsHandler(BaseHTTPRequestHandler):
             if self.command != "HEAD":
                 self.wfile.write(body)
         except (ConnectionError, TimeoutError):
+            logger.warning("%s %s: клиент отключился до получения ответа", self.command, self.path)
             self.log_message("Клиент отключился до получения ответа")
+        else:
+            level = logging.ERROR if status >= 500 else logging.WARNING if status >= 400 else logging.INFO
+            logger.log(level, "%s %s -> %s; ответ: %s", self.command, self.path, status, body.decode("utf-8"))
 
     def error(self, status, message):
         self.send_json(status, {"error": message})
@@ -114,11 +133,14 @@ class GameStatsHandler(BaseHTTPRequestHandler):
 
 def run(host=HOST, port=PORT):
     with HTTPServer((host, port), GameStatsHandler) as server:
+        logger.info("Сервер запущен на http://%s:%s", host, port)
         print(f"Сервер запущен на http://{host}:{port}")
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             print("\nСервер остановлен.")
+        finally:
+            logger.info("Сервер остановлен")
 
 
 if __name__ == "__main__":

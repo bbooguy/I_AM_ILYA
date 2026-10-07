@@ -1,5 +1,7 @@
 import http.client
 import json
+import logging
+from pathlib import Path
 import socket
 import sys
 from http import HTTPStatus
@@ -7,14 +9,30 @@ from http import HTTPStatus
 HOST = "127.0.0.1"
 PORT = 8000
 
+logging.basicConfig(
+    filename=Path(__file__).with_name("client.log"),
+    encoding="utf-8",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("client")
+
 
 def request(method, path, raw_body=""):
+    logger.info("Запрос: %s %s; тело: %s", method, path, raw_body or "(пусто)")
     connection = http.client.HTTPConnection(HOST, PORT, timeout=10)
     try:
         body = raw_body.encode("utf-8") if raw_body else None
         connection.request(method, path, body=body, headers={"Content-Type": "application/json"})
         response = connection.getresponse()
-        return response.status, response.read().decode("utf-8")
+        text = response.read().decode("utf-8")
+        level = logging.ERROR if response.status >= 500 else logging.WARNING if response.status >= 400 else logging.INFO
+        logger.log(level, "Ответ: %s %s; тело: %s", response.status, response.reason, text)
+        return response.status, text
+    except (OSError, http.client.HTTPException, ValueError) as error:
+        logger.error("Ошибка запроса: %s", error)
+        raise
     finally:
         connection.close()
 
@@ -57,6 +75,7 @@ def perform_tests():
     for case in cases:
         check(*case)
 
+    logger.info("Проверка неполной отправки тела запроса")
     with socket.create_connection((HOST, PORT), timeout=10) as connection:
         connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score": 999}')
         connection.shutdown(socket.SHUT_WR)
@@ -66,6 +85,7 @@ def perform_tests():
 
     with socket.create_connection((HOST, PORT), timeout=10) as connection:
         connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
+    logger.warning("Соединение намеренно закрыто посреди отправки тела")
     final = check("GET", "/users/user1", "", 200)
     assert final == after, (final, after)
     print("Все проверки пройдены; сервер отвечает после ошибок и обрыва соединения.")
@@ -78,12 +98,15 @@ def http_response(connection):
 
 
 def run_tests():
+    logger.info("Запуск автоматических проверок")
     print("Запуск автоматических проверок...")
     try:
         perform_tests()
     except (AssertionError, OSError, http.client.HTTPException, ValueError) as error:
+        logger.error("Проверки не прошли: %s", error)
         print(f"Проверки не прошли: {error}")
         return 1
+    logger.info("Все автоматические проверки пройдены")
     return 0
 
 
