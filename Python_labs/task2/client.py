@@ -19,13 +19,16 @@ def request(method, path, raw_body=""):
 
 
 def interactive():
-    print("Введите метод, путь и JSON-тело. Введите help вместо метода для примеров, exit — для выхода.")
+    print("Введите метод, путь и JSON-тело. Команды: help — примеры, test — повторить автотесты, exit — выход.")
     print('Пример: POST, /users/user1/score, {"score": 500}')
     while True:
         try:
-            method = input("HTTP-метод: ").strip().upper()
+            method = input("> ").strip().upper()
             if method in ("EXIT", "QUIT"):
                 break
+            if method == "TEST":
+                run_tests()
+                continue
             if method == "HELP":
                 print('GET /users — все пользователи; тело: Enter')
                 print('GET /users/user2 — один пользователь; тело: Enter')
@@ -33,7 +36,8 @@ def interactive():
                 print('GET /users/user99 — ошибка 404; тело: Enter')
                 print('POST /users/user1/score — ошибка 400; тело: {"score": "abc"}')
                 print('DELETE /users — ошибка 405; тело: Enter')
-                print('Метод, путь и тело вводятся отдельно. exit — выход.\n')
+                print('Метод, путь и тело вводятся отдельно.')
+                print('test — повторить автотесты; exit — выход.\n')
                 continue
             path = input("Путь: ").strip()
             body = input("JSON-тело (или Enter): ")
@@ -46,12 +50,18 @@ def interactive():
             print(f"Не удалось отправить запрос: {error}")
 
 
-def main():
+def run_tests():
     print("Запуск автоматических проверок...", flush=True)
     result = subprocess.run([sys.executable, str(Path(__file__).with_name("edge_cases.py"))])
     if result.returncode != 0:
         print("Автоматические проверки не прошли. Проверьте, что сервер запущен.")
-        return result.returncode
+    return result.returncode
+
+
+def main():
+    status = run_tests()
+    if status != 0:
+        return status
     try:
         choice = input("Перейти в ручной режим? [да/нет]: ").strip().lower()
     except (EOFError, KeyboardInterrupt):
