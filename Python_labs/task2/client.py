@@ -1,4 +1,7 @@
 import http.client
+import subprocess
+import sys
+from pathlib import Path
 
 HOST = "127.0.0.1"
 PORT = 8000
@@ -15,7 +18,7 @@ def request(method, path, raw_body=""):
         connection.close()
 
 
-def main():
+def interactive():
     print("Введите метод, путь и JSON-тело. Для выхода введите exit вместо метода.")
     print('Пример: POST, /users/user1/score, {"score": 500}')
     while True:
@@ -34,5 +37,21 @@ def main():
             print(f"Не удалось отправить запрос: {error}")
 
 
+def main():
+    print("Запуск автоматических проверок...", flush=True)
+    result = subprocess.run([sys.executable, str(Path(__file__).with_name("edge_cases.py"))])
+    if result.returncode != 0:
+        print("Автоматические проверки не прошли. Проверьте, что сервер запущен.")
+        return result.returncode
+    try:
+        choice = input("Перейти в ручной режим? [да/нет]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print("\nВыход.")
+        return 0
+    if choice in ("да", "д", "yes", "y"):
+        interactive()
+    return 0
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
