@@ -147,13 +147,13 @@ class GameStatsHandler(BaseHTTPRequestHandler):
 
         data = self.read_json_body()
         try:
-            update = ScoreUpdate.model_validate(data)
+            points = ScoreUpdate.model_validate(data)
         except ValidationError:
             self.error(400, "нужен объект с полем score: целое неотрицательное число")
             return
-        updated = UserStats.model_validate({**user.model_dump(), "score": user.score + update.score})
-        USERS_DATA[parts[2]] = updated
-        self.send_json(200, updated.model_dump())
+        new_user = UserStats.model_validate({**user.model_dump(), "score": user.score + points.score})
+        USERS_DATA[parts[2]] = new_user
+        self.send_json(200, new_user.model_dump())
 
 
 def run(host=HOST, port=PORT):

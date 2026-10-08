@@ -19,31 +19,31 @@ logging.basicConfig(
 logger = logging.getLogger("client")
 
 
-def request(method, path, raw_body=""):
-    logger.info("Запрос: %s %s; тело: %s", method, path, raw_body or "(пусто)")
-    connection = http.client.HTTPConnection(HOST, PORT, timeout=10)
+def request(method, path, body_text=""):
+    logger.info("Запрос: %s %s; тело: %s", method, path, body_text or "(пусто)")
+    conn = http.client.HTTPConnection(HOST, PORT, timeout=10)
     try:
-        body = raw_body.encode("utf-8") if raw_body else None
-        connection.request(method, path, body=body, headers={"Content-Type": "application/json"})
-        response = connection.getresponse()
-        text = response.read().decode("utf-8")
-        level = logging.ERROR if response.status >= 500 else logging.WARNING if response.status >= 400 else logging.INFO
-        logger.log(level, "Ответ: %s %s; тело: %s", response.status, response.reason, text)
-        return response.status, text
+        body = body_text.encode("utf-8") if body_text else None
+        conn.request(method, path, body=body, headers={"Content-Type": "application/json"})
+        reply = conn.getresponse()
+        text = reply.read().decode("utf-8")
+        level = logging.ERROR if reply.status >= 500 else logging.WARNING if reply.status >= 400 else logging.INFO
+        logger.log(level, "Ответ: %s %s; тело: %s", reply.status, reply.reason, text)
+        return reply.status, text
     except (OSError, http.client.HTTPException, ValueError) as error:
         logger.error("Ошибка запроса: %s", error)
         raise
     finally:
-        connection.close()
+        conn.close()
 
 
 def check(method, path, body, expected):
-    status, raw = request(method, path, body)
-    data = json.loads(raw)
+    status, text = request(method, path, body)
+    data = json.loads(text)
     assert status == expected, (method, path, status, data)
     if expected != 200:
         assert isinstance(data.get("error"), str), data
-    print(f"{method} {path} {body} -> {status}: {raw}")
+    print(f"{method} {path} {body} -> {status}: {text}")
 
     status, _ = request("GET", "/users")
     assert status == 200
@@ -79,25 +79,25 @@ def perform_tests():
         check(*case)
 
     logger.info("Проверка неполной отправки тела запроса")
-    with socket.create_connection((HOST, PORT), timeout=10) as connection:
-        connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score": 999}')
-        connection.shutdown(socket.SHUT_WR)
-        response = http_response(connection)
-        assert response.status == 400
-        assert "error" in json.loads(response.read())
+    with socket.create_connection((HOST, PORT), timeout=10) as conn:
+        conn.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score": 999}')
+        conn.shutdown(socket.SHUT_WR)
+        reply = http_response(conn)
+        assert reply.status == 400
+        assert "error" in json.loads(reply.read())
 
-    with socket.create_connection((HOST, PORT), timeout=10) as connection:
-        connection.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
+    with socket.create_connection((HOST, PORT), timeout=10) as conn:
+        conn.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
     logger.warning("Соединение намеренно закрыто посреди отправки тела")
     final = check("GET", "/users/user1", "", 200)
     assert final == after, (final, after)
     print("Все проверки пройдены; сервер отвечает после ошибок и обрыва соединения.")
 
-def http_response(connection):
+def http_response(conn):
     from http.client import HTTPResponse
-    response = HTTPResponse(connection)
-    response.begin()
-    return response
+    reply = HTTPResponse(conn)
+    reply.begin()
+    return reply
 
 
 def run_tests():
@@ -137,25 +137,25 @@ def interactive():
     print("Введите запрос одной строкой. help — примеры, test — автотесты, exit — выход.")
     while True:
         try:
-            command = input("> ").strip()
-            if not command:
+            line = input("> ").strip()
+            if not line:
                 continue
-            if command.lower() in ("exit", "quit"):
+            if line.lower() in ("exit", "quit"):
                 break
-            if command.lower() == "help":
+            if line.lower() == "help":
                 show_help()
                 continue
-            if command.lower() == "test":
+            if line.lower() == "test":
                 run_tests()
                 continue
-            parts = command.split(maxsplit=2)
+            parts = line.split(maxsplit=2)
             if len(parts) < 2:
                 print("Формат: METHOD /path [JSON]")
                 continue
             method, path = parts[:2]
             body = parts[2] if len(parts) == 3 else ""
-            status, response = request(method.upper(), path, body)
-            print(f"{status} {HTTPStatus(status).phrase}\n{response}\n")
+            status, reply = request(method.upper(), path, body)
+            print(f"{status} {HTTPStatus(status).phrase}\n{reply}\n")
         except (EOFError, KeyboardInterrupt):
             print("\nВыход.")
             break
