@@ -114,14 +114,22 @@ def run_tests():
 
 
 def show_help():
-    print("GET /users")
-    print("GET /users/user2")
-    print('POST /users/user1/score {"score": 500}')
-    print("GET /users/user99")
-    print("GET /foo")
-    print("GET /error — демонстрация ошибки 500")
-    print('POST /users/user1/score {"score": "abc"}')
-    print("DELETE /users")
+    print("200 OK — успешный запрос:")
+    print("  GET /users")
+    print("  GET /users/user2")
+    print('  POST /users/user1/score {"score": 500}')
+    print("400 Bad Request — неверное тело запроса:")
+    print('  POST /users/user1/score {"score": "abc"}')
+    print('  POST /users/user1/score {"score":')
+    print("  POST /users/user1/score")
+    print("404 Not Found — пользователь или маршрут не найден:")
+    print("  GET /users/user99")
+    print("  GET /foo")
+    print("405 Method Not Allowed — неподходящий метод:")
+    print("  DELETE /users")
+    print("  GET /users/user1/score")
+    print("500 Internal Server Error — демонстрация внутренней ошибки:")
+    print("  GET /error")
     print("help — примеры; test — повторить автотесты; exit — выход")
 
 
@@ -164,15 +172,9 @@ def main():
         interactive()
         return 0
     status = run_tests()
-    if mode == "test" or status != 0:
+    if mode == "test":
         return status
-    try:
-        choice = input("Перейти в ручной режим? [да/нет]: ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        print("\nВыход.")
-        return 0
-    if choice in ("да", "д", "yes", "y"):
-        interactive()
+    interactive()
     return 0
 
 
