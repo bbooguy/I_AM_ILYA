@@ -60,6 +60,16 @@ class GameStatsHandler(BaseHTTPRequestHandler):
             self.error(code, message or "некорректный запрос")
 
     def do_GET(self):
+        logger.info("Запрос: GET %s", self.path)
+        try:
+            self.handle_get()
+        except Exception:
+            logger.exception("Внутренняя ошибка при GET %s", self.path)
+            self.error(500, "Внутренняя ошибка сервера")
+
+    def handle_get(self):
+        if self.path == "/error":
+            raise RuntimeError("Демонстрационная внутренняя ошибка")
         parts = self.path.split("/")
         if parts == ["", "users"]:
             self.send_json(200, USERS_DATA)
@@ -74,7 +84,41 @@ class GameStatsHandler(BaseHTTPRequestHandler):
         else:
             self.error(404, "маршрут не найден")
 
+    def read_json_body(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError as error:
+            raise ValueError("некорректный Content-Length") from error
+        if self.headers.get("Transfer-Encoding"):
+            raise ValueError("Transfer-Encoding не поддерживается")
+        if length <= 0:
+            raise ValueError("Тело запроса пустое")
+        try:
+            body = self.rfile.read(length)
+        except (ConnectionError, TimeoutError) as error:
+            logger.warning("Обрыв или таймаут при чтении тела: %s", error)
+            raise ValueError("тело запроса не получено полностью") from error
+        if len(body) != length:
+            logger.warning("Получено %s из %s байт тела", len(body), length)
+            raise ValueError("тело запроса не получено полностью")
+        try:
+            text = body.decode("utf-8")
+            logger.info("Тело POST %s: %s", self.path, text)
+            return json.loads(text)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("невалидный JSON") from error
+
     def do_POST(self):
+        logger.info("Запрос: POST %s", self.path)
+        try:
+            self.handle_post()
+        except ValueError as error:
+            self.error(400, str(error))
+        except Exception:
+            logger.exception("Внутренняя ошибка при POST %s", self.path)
+            self.error(500, "Внутренняя ошибка сервера")
+
+    def handle_post(self):
         parts = self.path.split("/")
         if parts == ["", "users"] or (len(parts) == 3 and parts[:2] == ["", "users"] and parts[2]):
             self.error(405, "метод не поддерживается")
@@ -87,27 +131,7 @@ class GameStatsHandler(BaseHTTPRequestHandler):
             self.error(404, "Пользователь не найден")
             return
 
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-        except ValueError:
-            self.error(400, "некорректный Content-Length")
-            return
-        if length <= 0 or self.headers.get("Transfer-Encoding"):
-            self.error(400, "нужно JSON-тело с положительным Content-Length")
-            return
-        try:
-            body = self.rfile.read(length)
-        except (ConnectionError, TimeoutError):
-            self.error(400, "тело запроса не получено полностью")
-            return
-        if len(body) != length:
-            self.error(400, "тело запроса не получено полностью")
-            return
-        try:
-            data = json.loads(body.decode("utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            self.error(400, "невалидный JSON")
-            return
+        data = self.read_json_body()
         if not isinstance(data, dict) or "score" not in data:
             self.error(400, "нужен объект с обязательным полем score")
             return

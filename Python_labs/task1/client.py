@@ -58,11 +58,14 @@ def perform_tests():
     cases = [
         ("GET", "/users/user99", "", 404),
         ("GET", "/foo", "", 404),
+        ("GET", "/error", "", 500),
         ("POST", "/users/user99/score", '{"score": 1}', 404),
         ("POST", "/foo", "", 404),
         ("POST", "/users/user1/score", "", 400),
         ("POST", "/users/user1/score", '{"score":', 400),
         ("DELETE", "/users", "", 405),
+        ("PUT", "/users", "", 405),
+        ("PATCH", "/users", "", 405),
         ("OPTIONS", "/users", "", 405),
         ("CUSTOM", "/users", "", 405),
         ("GET", "/users/user1/score", "", 405),
@@ -120,6 +123,7 @@ def show_help():
     print('POST /users/user1/score {"score": 500}')
     print("GET /users/user99")
     print("GET /foo")
+    print("GET /error — демонстрация ошибки 500")
     print('POST /users/user1/score {"score": "abc"}')
     print("DELETE /users")
     print("help — примеры; test — повторить автотесты; exit — выход")
