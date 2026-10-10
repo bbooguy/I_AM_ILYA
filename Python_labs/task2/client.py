@@ -6,6 +6,8 @@ import socket
 import sys
 from http import HTTPStatus
 
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
+
 HOST = "127.0.0.1"
 PORT = 8000
 
@@ -19,7 +21,38 @@ logging.basicConfig(
 logger = logging.getLogger("client")
 
 
+class UserStats(BaseModel):
+    name: str
+    game: str
+    level: int = Field(ge=0, strict=True)
+    score: int = Field(ge=0, strict=True)
+    playtime_hours: int = Field(ge=0, strict=True)
+
+
+class ScoreRequest(BaseModel):
+    score: int = Field(ge=0, strict=True)
+
+
+class ErrorResponse(BaseModel):
+    error: str
+
+
+def check_response(status, path, text):
+    if status != 200:
+        data = ErrorResponse.model_validate_json(text)
+        logger.info("Проверена ошибка сервера: %s", data.error)
+    elif path == "/users":
+        data = TypeAdapter(dict[str, UserStats]).validate_json(text)
+        logger.info("Проверены данные пользователей: %s", len(data))
+    else:
+        data = UserStats.model_validate_json(text)
+        logger.info("Проверены данные пользователя: %s", data.name)
+    return data
+
+
 def request(method, path, body_text=""):
+    if isinstance(body_text, ScoreRequest):
+        body_text = body_text.model_dump_json()
     logger.info("Запрос: %s %s; тело: %s", method, path, body_text or "(пусто)")
     conn = http.client.HTTPConnection(HOST, PORT, timeout=10)
     try:
@@ -29,6 +62,7 @@ def request(method, path, body_text=""):
         text = reply.read().decode("utf-8")
         level = logging.ERROR if reply.status >= 500 else logging.WARNING if reply.status >= 400 else logging.INFO
         logger.log(level, "Ответ: %s %s; тело: %s", reply.status, reply.reason, text)
+        check_response(reply.status, path, text)
         return reply.status, text
     except (OSError, http.client.HTTPException, ValueError) as error:
         logger.error("Ошибка запроса: %s", error)
@@ -53,7 +87,7 @@ def perform_tests():
     users = check("GET", "/users", "", 200)
     assert len(users) == 3
     before = check("GET", "/users/user1", "", 200)
-    after = check("POST", "/users/user1/score", '{"score": 500}', 200)
+    after = check("POST", "/users/user1/score", ScoreRequest(score=500), 200)
     assert after["score"] == before["score"] + 500
     cases = [
         ("GET", "/users/user99", "", 404),
@@ -84,7 +118,7 @@ def perform_tests():
         conn.shutdown(socket.SHUT_WR)
         reply = http_response(conn)
         assert reply.status == 400
-        assert "error" in json.loads(reply.read())
+        ErrorResponse.model_validate_json(reply.read())
 
     with socket.create_connection((HOST, PORT), timeout=10) as conn:
         conn.sendall(b'POST /users/user1/score HTTP/1.0\r\nContent-Length: 100\r\n\r\n{"score":')
@@ -154,6 +188,11 @@ def interactive():
                 continue
             method, path = parts[:2]
             body = parts[2] if len(parts) == 3 else ""
+            if method.upper() == "POST" and body:
+                try:
+                    body = ScoreRequest.model_validate_json(body)
+                except ValidationError:
+                    pass
             status, reply = request(method.upper(), path, body)
             print(f"{status} {HTTPStatus(status).phrase}\n{reply}\n")
         except (EOFError, KeyboardInterrupt):
