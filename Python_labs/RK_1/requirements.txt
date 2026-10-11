@@ -1,0 +1,6 @@
+httpx>=0.27,<1
+pydantic>=2,<3
+pandas>=2,<4
+matplotlib>=3.8,<4
+seaborn>=0.13,<1
+jupyterlab>=4,<5
