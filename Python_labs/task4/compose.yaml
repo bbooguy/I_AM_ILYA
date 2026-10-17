@@ -1,0 +1,36 @@
+services:
+  bank:
+    build: .
+    ports:
+      - "127.0.0.1:9999:9999"
+    volumes:
+      - bank-data:/data
+    secrets:
+      - admin_password
+      - alice_password
+      - bob_password
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 1.0
+    init: true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+secrets:
+  admin_password:
+    file: .secrets/admin_password
+  alice_password:
+    file: .secrets/alice_password
+  bob_password:
+    file: .secrets/bob_password
+volumes:
+  bank-data:

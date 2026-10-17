@@ -1,0 +1,25 @@
+ Container dz-4-bank-run-6b0108a7aadc Creating 
+ Container dz-4-bank-run-6b0108a7aadc Created 
+test_amount_validation_and_self_transfer (test_server.BankTests.test_amount_validation_and_self_transfer) ... ok
+test_bruteforce_across_connections (test_server.BankTests.test_bruteforce_across_connections) ... ok
+test_connection_limit (test_server.BankTests.test_connection_limit) ... ok
+test_failed_login_clears_session (test_server.BankTests.test_failed_login_clears_session) ... ok
+test_fuzz_invalid_and_oversized_input (test_server.BankTests.test_fuzz_invalid_and_oversized_input) ... protocol rejected ip=127.0.0.1 type=ProtocolError
+ok
+test_idor (test_server.BankTests.test_idor) ... ok
+test_login_and_password_storage (test_server.BankTests.test_login_and_password_storage) ... ok
+test_logs_do_not_contain_password (test_server.BankTests.test_logs_do_not_contain_password) ... ok
+test_normal_transfer_and_replay (test_server.BankTests.test_normal_transfer_and_replay) ... ok
+test_persistence_and_json_tampering (test_server.BankTests.test_persistence_and_json_tampering) ... ok
+test_race_and_money_conservation (test_server.BankTests.test_race_and_money_conservation) ... ok
+test_replay_id_survives_restart (test_server.BankTests.test_replay_id_survives_restart) ... ok
+test_slow_incomplete_line_has_absolute_deadline (test_server.BankTests.test_slow_incomplete_line_has_absolute_deadline) ... protocol rejected ip=127.0.0.1 type=TimeoutError
+ok
+test_sql_injection_and_admin (test_server.BankTests.test_sql_injection_and_admin) ... ok
+test_tcp_fragmentation_and_two_commands (test_server.BankTests.test_tcp_fragmentation_and_two_commands) ... ok
+test_transaction_rolls_back_if_record_fails (test_server.BankTests.test_transaction_rolls_back_if_record_fails) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 23.915s
+
+OK
