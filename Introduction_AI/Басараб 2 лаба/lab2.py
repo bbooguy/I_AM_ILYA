@@ -1,9 +1,9 @@
 import math
 import matplotlib.pyplot as plt
 
-BASE_P = 6
-BASE_ETA = 1.0
-BASE_M = 3500
+BASE_P = 8
+BASE_ETA = 0.05
+BASE_M = 4000
 
 M_VALUES = [500, 1000, 2000, 3000, 4000]
 ETA_VALUES = [0.1, 0.3, 0.5, 0.7, 1.0]
@@ -11,11 +11,11 @@ P_VALUES = [3, 4, 5, 6, 7, 8, 9]
 REAL_INPUTS = True
 
 N = 20
-a = -4
-b = 4
+a = 1.7
+b = 2
 
 def func(t):
-    return 0.4 * math.sin(0.3 * t) + 0.5
+    return math.sqrt(math.tan(-t))
 
 
 def data():
@@ -149,7 +149,7 @@ def single(p, eta, M):
     fig.tight_layout()
 
 #single(BASE_P, BASE_ETA, BASE_M)
-experiment_M()                       # влияние M
-# experiment_eta()                   # влияние η
-# experiment_p()                     # влияние p
+#experiment_M()                       # влияние M
+#experiment_eta()                   # влияние η
+experiment_p()                     # влияние p
 plt.show()
